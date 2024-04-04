@@ -54,6 +54,8 @@ services:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
+    ports:
+      - 5432:5432
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
@@ -236,7 +238,7 @@ services:
     profiles:
       - flower
     ports:
-      - "5555:5555"
+      - "8084:5555"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
       interval: 30s
@@ -249,16 +251,61 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  minio:
+    # container_name: cMinio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=supersecret
+    image: quay.io/minio/minio:latest
+    ports:
+      - '8085:9000'
+      - '8086:9001'
+    volumes:
+      - ./minio:/data
+    restart: unless-stopped
+    
+  mlflow:
+    restart: always
+    build: ./mlflow
+    image: mlflow_server
+    container_name: mlflow_server
+    depends_on:
+        - minio
+        - postgres
+    ports:
+        - "8087:5000"
+    environment:
+        - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+        - AWS_ACCESS_KEY_ID=admin # ${AWS_ACCESS_KEY_ID}
+        - AWS_SECRET_ACCESS_KEY=supersecret # ${AWS_SECRET_ACCESS_KEY}
+    command: mlflow server --backend-store-uri postgresql://airflow:airflow@postgres:5432/mlflow --default-artifact-root s3://mlflow/ --host 0.0.0.0
+  
   fastapi:
     build:
       context: .
       dockerfile: inference/inference.Dockerfile
     ports:
-      - "8000:8000"
+      - "8088:8000"
     volumes:
       - ${AIRFLOW_PROJ_DIR:-.}/models:/opt/airflow/models
       - ${AIRFLOW_PROJ_DIR:-.}/encoders:/opt/airflow/encoders
 
+  pgadmin:
+    image: dpage/pgadmin4
+    hostname: pgadmin
+    container_name: demo-pgadmin
+    depends_on:
+      - postgres
+    ports:
+      - 8089:80
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pgadmin4@pgadmin.org
+      PGADMIN_DEFAULT_PASSWORD: root
+    restart: always
+    volumes:
+      - ./pgadmin/data/:/var/lib/pgadmin
+  
 volumes:
   postgres-db-volume:
   mysql-db-volume:
