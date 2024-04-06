@@ -305,7 +305,14 @@ services:
     restart: always
     volumes:
       - ./pgadmin/data/:/var/lib/pgadmin
-  
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: myjupyter/jupyter.dockerfile
+    ports:
+      - 8888:8888
+
 volumes:
   postgres-db-volume:
   mysql-db-volume:
