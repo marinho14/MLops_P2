@@ -312,7 +312,9 @@ services:
       dockerfile: myjupyter/jupyter.dockerfile
     ports:
       - 8888:8888
-
+    volumes:
+      - ./myjupyter:/work
+      
 volumes:
   postgres-db-volume:
   mysql-db-volume:

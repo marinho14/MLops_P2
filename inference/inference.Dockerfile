@@ -8,6 +8,6 @@ WORKDIR /code
 # 
 # COPY models /code/models
 # COPY encoders /code/encoders
-COPY inference/penguins_api.py /code/app.py
+COPY inference/inference_api.py /code/app.py
 #
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
